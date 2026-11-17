@@ -58,7 +58,7 @@ export async function initMarket() {
     const prev = (await db.one('select close from candles where token=$1 order by day desc limit 1', [inst.token]))?.close || base;
     Q.set(inst.token, { token: inst.token, ltp: prev, open: prev, high: prev, low: prev, close: prev, volume: 0, ...band(inst, prev), ts: Date.now(), base: prev });
   }
-  if (config.feedAdapter === 'yahoo') { await loadYahooHistory().catch((e) => console.warn('yahoo history', e.message)); await pollYahoo().catch((e) => console.warn('yahoo feed', e.message)); }
+
 }
 
 // ── Simulated feed: mean-reverting random walk around the reference price
@@ -123,9 +123,16 @@ async function loadYahooHistory() {
       const inst = getInstrument(token);
       if (qq) Object.assign(qq, { close: prev, ltp: d.meta.regularMarketPrice || prev, base: d.meta.regularMarketPrice || prev, open: prev, high: Math.max(prev, d.meta.regularMarketPrice || prev), low: Math.min(prev, d.meta.regularMarketPrice || prev) }, band(inst, prev));
       ok++;
-    } catch { /* keep seeded data */ }
+    } catch (e) { if (!ok) console.warn('yahoo', token, e.message); }
   }
   console.log(`Yahoo history loaded for ${ok} instruments`);
+}
+
+// Background: swap simulated history/prices for real delayed data when FEED_ADAPTER=yahoo
+export async function loadRealData() {
+  if (config.feedAdapter !== 'yahoo') return;
+  await loadYahooHistory().catch((e) => console.warn('yahoo history', e.message));
+  await pollYahoo().catch((e) => console.warn('yahoo feed', e.message));
 }
 
 export function startFeed() {

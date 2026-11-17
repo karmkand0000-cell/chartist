@@ -47,14 +47,19 @@ function seedDemo() {
 
 export async function initMf() {
   const have = (await db.one('select count(*)::int n from mf_schemes')).n;
-  if (MF_FEED === 'mfapi') { const n = await loadFromMfapi().catch(() => 0); if (n) return; }
   if (have) return;
   for (const f of seedDemo()) {
     const last = f.hist.at(-1);
     await db.query(`insert into mf_schemes(code, name, house, category, nav, nav_date, history) values ($1,$2,'Demo AMC',$3,$4,$5,$6) on conflict do nothing`, [f.code, f.name, f.cat, last[1], last[0], JSON.stringify(f.hist)]);
   }
 }
-export async function refreshNavs() { if (MF_FEED === 'mfapi') return loadFromMfapi(); return 0; }
+export async function refreshNavs() {
+  if (MF_FEED !== 'mfapi') return 0;
+  const n = await loadFromMfapi();
+  if (n) await db.query(`update mf_schemes set active = (source = 'amfi')`);
+  console.log(`AMFI NAVs loaded for ${n} schemes`);
+  return n;
+}
 
 function cagr(hist, years) {
   if (!hist?.length) return null;

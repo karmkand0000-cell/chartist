@@ -11,11 +11,11 @@ import { connect, db } from './db.js';
 import { AppError } from './errors.js';
 import { loadSettings } from './services/settings.js';
 import { seedInstruments, rollDerivatives } from './services/instruments.js';
-import { initMarket, startFeed, spotOf } from './services/market.js';
+import { initMarket, startFeed, spotOf, loadRealData } from './services/market.js';
 import { initOms, startRiskMonitor } from './services/oms.js';
 import { startEodScheduler } from './services/eod.js';
 import { ensureAdmin, ensureDemo } from './services/auth.js';
-import { initMf, processSips } from './services/mf.js';
+import { initMf, processSips, refreshNavs } from './services/mf.js';
 import { seedSampleIpos } from './services/ipo.js';
 import clientRoutes from './routes/client.js';
 import adminRoutes from './routes/admin.js';
@@ -35,7 +35,7 @@ export async function build({ logger = true, background = true } = {}) {
   await seedSampleIpos();
   await processSips().catch(() => {});
   await initOms();
-  if (background) { startFeed(); startRiskMonitor(); startEodScheduler(); }
+  if (background) { startFeed(); startRiskMonitor(); startEodScheduler(); loadRealData().then(() => refreshNavs()).catch((e) => console.warn('real data', e.message)); }
 
   const app = Fastify({ logger: logger ? { level: config.dev ? 'info' : 'warn' } : false, trustProxy: true, bodyLimit: 1024 * 1024 });
   await app.register(cors, { origin: config.corsOrigins.includes('*') ? true : config.corsOrigins, credentials: false });
