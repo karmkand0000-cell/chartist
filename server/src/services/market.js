@@ -58,7 +58,7 @@ export async function initMarket() {
     const prev = (await db.one('select close from candles where token=$1 order by day desc limit 1', [inst.token]))?.close || base;
     Q.set(inst.token, { token: inst.token, ltp: prev, open: prev, high: prev, low: prev, close: prev, volume: 0, ...band(inst, prev), ts: Date.now(), base: prev });
   }
-  if (config.feedAdapter === 'yahoo') await pollYahoo().catch((e) => console.warn('yahoo feed', e.message));
+  if (config.feedAdapter === 'yahoo') { await loadYahooHistory().catch((e) => console.warn('yahoo history', e.message)); await pollYahoo().catch((e) => console.warn('yahoo feed', e.message)); }
 }
 
 // ── Simulated feed: mean-reverting random walk around the reference price
@@ -85,8 +85,7 @@ function step() {
 
 // Optional: real delayed prices from Yahoo Finance (free) as the reference level
 async function pollYahoo() {
-  const map = Object.fromEntries([...universe.indices.map((i) => [`IDX:${i.symbol}`, i.yahoo]), ...universe.stocks.map((s) => [`NSE:${s.symbol}`, `${s.symbol}.NS`])]);
-  for (const [token, y] of Object.entries(map)) {
+  for (const [token, y] of Object.entries(yahooMap())) {
     try {
       const r = await fetch(`https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(y)}?range=1d&interval=1d`, { headers: { 'User-Agent': 'Mozilla/5.0' } });
       const m = (await r.json()).chart.result[0].meta;
@@ -94,6 +93,39 @@ async function pollYahoo() {
       if (q && m.regularMarketPrice) { q.base = m.regularMarketPrice; if (!isOpen()) q.ltp = m.regularMarketPrice; }
     } catch { /* keep previous */ }
   }
+}
+
+const yahooMap = () => Object.fromEntries([...universe.indices.map((i) => [`IDX:${i.symbol}`, i.yahoo]), ...universe.stocks.map((s) => [`NSE:${s.symbol}`, `${s.symbol}.NS`])]);
+// Replace seeded candles with ~2 years of real daily history (Yahoo Finance, delayed)
+async function loadYahooHistory() {
+  let ok = 0;
+  for (const [token, y] of Object.entries(yahooMap())) {
+    try {
+      const r = await fetch(`https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(y)}?range=2y&interval=1d`, { headers: { 'User-Agent': 'Mozilla/5.0' } });
+      const d = (await r.json()).chart.result[0];
+      const q = d.indicators.quote[0];
+      const rows = [];
+      d.timestamp.forEach((t, i) => {
+        if ([q.open[i], q.high[i], q.low[i], q.close[i]].some((v) => v == null)) return;
+        rows.push([istParts(new Date(t * 1000)).date, r2(q.open[i]), r2(q.high[i]), r2(q.low[i]), r2(q.close[i]), Math.round(q.volume[i] || 0)]);
+      });
+      const today = istParts().date;
+      const hist = rows.filter((x) => x[0] < today);
+      if (hist.length < 50) continue;
+      await db.query('delete from candles where token=$1', [token]);
+      for (let k = 0; k < hist.length; k += 200) {
+        const chunk = hist.slice(k, k + 200);
+        const vals = chunk.map((_, i) => `($1,$${i * 6 + 2},$${i * 6 + 3},$${i * 6 + 4},$${i * 6 + 5},$${i * 6 + 6},$${i * 6 + 7})`).join(',');
+        await db.query(`insert into candles(token, day, open, high, low, close, volume) values ${vals} on conflict do nothing`, [token, ...chunk.flat()]);
+      }
+      const prev = hist.at(-1)[4];
+      const qq = Q.get(token);
+      const inst = getInstrument(token);
+      if (qq) Object.assign(qq, { close: prev, ltp: d.meta.regularMarketPrice || prev, base: d.meta.regularMarketPrice || prev, open: prev, high: Math.max(prev, d.meta.regularMarketPrice || prev), low: Math.min(prev, d.meta.regularMarketPrice || prev) }, band(inst, prev));
+      ok++;
+    } catch { /* keep seeded data */ }
+  }
+  console.log(`Yahoo history loaded for ${ok} instruments`);
 }
 
 export function startFeed() {

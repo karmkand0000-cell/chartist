@@ -4,7 +4,7 @@ import { CONFIG } from '../assets/js/config.js';
 import { $, $$, esc, inr, num, dt, toast, modal, confirmBox, tabs, empty, signed, cls, downloadCSV, LOGO } from '../assets/js/ui.js';
 
 let me = null, view = 'dashboard', sub = '';
-const NAV = [['dashboard', 'Dashboard'], ['kyc', 'KYC queue'], ['clients', 'Clients'], ['funds', 'Fund requests'], ['orders', 'Orders & trades'], ['rms', 'Risk (RMS)'], ['ops', 'Operations'], ['audit', 'Audit log']];
+const NAV = [['dashboard', 'Dashboard'], ['kyc', 'KYC queue'], ['clients', 'Clients'], ['funds', 'Fund requests'], ['orders', 'Orders & trades'], ['rms', 'Risk (RMS)'], ['ipo', 'IPO & MF'], ['ops', 'Operations'], ['audit', 'Audit log']];
 
 function shell() {
   document.body.innerHTML = `<header class="topbar"><a class="logo" href="#">${LOGO}<span>${esc(CONFIG.brand)} Back Office</span></a><div class="ticker"></div><div class="top-actions"><span class="mkt-status" id="ms"></span><span class="muted small">${esc(me.name)} · ${esc(me.role)}</span><button class="btn ghost sm" id="lo">Log out</button></div></header>
@@ -82,6 +82,13 @@ const VIEWS = {
         <h3>Broadcast message</h3><form id="bc"><input name="title" placeholder="Title" required><textarea name="body" rows="2" placeholder="Message"></textarea><button class="btn ghost sm">Send to all clients</button></form>
         <h3>Simulator: set price</h3><form id="sp" class="row"><input name="token" placeholder="NSE:RELIANCE" required><input name="price" type="number" step="0.05" placeholder="Price" required style="width:120px"><button class="btn ghost sm">Set</button></form></div></div>`;
   },
+  async ipo() {
+    const [ipos, mfo] = await Promise.all([get('/api/admin/ipo'), get('/api/admin/mf-orders')]);
+    return `<div class="page-head"><h1>IPO &amp; Mutual funds</h1></div>
+      <div class="card"><h3>IPOs</h3><div class="tbl-wrap"><table class="tbl"><thead><tr><th>Issue</th><th>Band</th><th>Lot</th><th>Dates</th><th>State</th><th class="r">Applications</th><th class="r">Blocked</th><th></th></tr></thead><tbody>${ipos.map((i) => `<tr><td>${esc(i.name)} ${i.sample ? '<small class="muted">(sample)</small>' : ''}</td><td>₹${num(i.price_lo, 0)}–${num(i.price_hi, 0)}</td><td>${i.lot}</td><td class="small">${esc(i.open_date)} → ${esc(i.close_date)}</td><td>${st(i.state)}</td><td class="r">${i.applications}</td><td class="r">${inr(i.blocked)}</td><td>${i.state === 'CLOSED' ? `<button class="btn xs" data-allot="${i.id}">Run allotment</button>` : ''}</td></tr>`).join('')}</tbody></table></div>
+      <h4>Add IPO</h4><form id="ipoF" class="grid3"><input name="name" placeholder="Company name" required><input name="symbol" placeholder="NSE symbol (optional)"><select name="issue_type"><option>Mainboard</option><option>SME</option></select><input name="price_lo" type="number" placeholder="Price low" required><input name="price_hi" type="number" placeholder="Price high" required><input name="lot" type="number" placeholder="Lot size" required><input name="issue_size" placeholder="Issue size (e.g. ₹500 Cr)"><label>Open<input name="open_date" type="date" required></label><label>Close<input name="close_date" type="date" required></label><label>Listing<input name="listing_date" type="date"></label><button class="btn sm">Add IPO</button></form></div>
+      <div class="card"><h3>Mutual fund orders</h3>${mfo.length ? `<div class="tbl-wrap"><table class="tbl"><thead><tr><th>Time</th><th>Client</th><th>Scheme</th><th>Side</th><th class="r">Amount</th><th class="r">Units</th><th class="r">NAV</th></tr></thead><tbody>${mfo.map((o) => `<tr><td class="muted nowrap">${dt(o.created_at)}</td><td>${esc(o.ucc)}</td><td>${esc(o.name)}</td><td>${o.side}${o.sip_id ? ' (SIP)' : ''}</td><td class="r">${inr(o.amount)}</td><td class="r">${num(o.units, 3)}</td><td class="r">${num(o.nav, 2)}</td></tr>`).join('')}</tbody></table></div>` : empty('No MF orders yet.')}</div>`;
+  },
   async audit() {
     const a = await get('/api/admin/audit');
     return `<div class="page-head"><h1>Audit log</h1><button class="btn ghost sm" id="csvA">Export CSV</button></div><div class="card"><div class="tbl-wrap"><table class="tbl"><thead><tr><th>Time</th><th>Actor</th><th>Action</th><th>Entity</th><th>Data</th><th>IP</th></tr></thead><tbody>${a.map((x) => `<tr><td class="muted nowrap">${dt(x.created_at)}</td><td>${esc(x.actor || x.actor_role)}</td><td>${esc(x.action)}</td><td>${esc(x.entity || '')} ${esc(x.entity_id || '')}</td><td class="small">${esc(x.data ? JSON.stringify(x.data).slice(0, 120) : '')}</td><td class="small">${esc(x.ip || '')}</td></tr>`).join('')}</tbody></table></div></div>`;
@@ -153,6 +160,7 @@ function bind() {
       if (d.sq && (await confirmBox('Square off this client?'))) { await post(`/api/admin/clients/${d.sq}/square-off`, {}); toast('Square-off placed', 'success'); return render(); }
       if (d.set) { await put(`/api/admin/settings/${d.set}`, { value: d.v === 'true' }); toast('Updated', 'success'); return render(); }
       if (e.target.id === 'eod' && (await confirmBox('Run end-of-day processing now?'))) { const s = await post('/api/admin/eod', { force: true }); toast(`EOD done: ${JSON.stringify(s)}`, 'success', 8000); return render(); }
+      if (d.allot) { const pct = prompt('Allotment ratio % (each applicant gets 1 lot with this probability)', '30'); if (!pct) return; const lp = prompt('Listing price (optional)', ''); const r = await post(`/api/admin/ipo/${d.allot}/allot`, { pct: Number(pct), listingPrice: lp ? Number(lp) : undefined }); toast(`Allotted ${r.allotted} of ${r.applications}`, 'success'); return render(); }
       if (e.target.id === 'csvT') downloadCSV('trades.csv', await get('/api/admin/trades'));
       if (e.target.id === 'csvA') downloadCSV('audit.csv', await get('/api/admin/audit'));
     } catch (x) { toast(x.message, 'error', 6000); }
@@ -170,6 +178,7 @@ function bind() {
     e.preventDefault();
     const f = Object.fromEntries(new FormData(e.target));
     try {
+      if (e.target.id === 'ipoF') { await post('/api/admin/ipo', f); toast('IPO added', 'success'); return render(); }
       if (e.target.id === 'bc') { await post('/api/admin/broadcast', f); toast('Broadcast sent', 'success'); e.target.reset(); }
       if (e.target.id === 'sp') { const q = await post('/api/admin/price', { token: f.token, price: Number(f.price) }); toast(`${f.token} → ${q.ltp}`, 'success'); }
     } catch (x) { toast(x.message, 'error'); }

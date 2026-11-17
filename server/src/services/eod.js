@@ -9,6 +9,7 @@ import { rollDerivatives } from './instruments.js';
 import { spotOf } from './market.js';
 import { r2, istParts, parseToken, displayName, isDerivative, isOption } from '../../../shared/util.js';
 import { events } from './oms.js';
+import { processSips, refreshNavs } from './mf.js';
 
 const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 
@@ -87,6 +88,8 @@ export async function runEod(actor, { date = istParts().date, force = false } = 
   await closeDay(date);
   summary.newContracts = await rollDerivatives(spotOf, new Date(Date.now() + 12 * 3600 * 1000));
   await db.query(`update gtts set status='EXPIRED' where status='ACTIVE' and expires_at < now()`);
+  await refreshNavs().catch(() => 0);
+  summary.sipInstalments = await processSips().catch(() => 0);
 
   await db.query(`insert into eod_runs(trade_date, status, summary, run_by) values ($1,'done',$2,$3) on conflict (trade_date) do update set status='done', summary=excluded.summary`, [date, JSON.stringify(summary), actor?.id || null]);
   await audit(actor, 'eod_run', 'eod', date, summary);

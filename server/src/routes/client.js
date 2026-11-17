@@ -13,6 +13,8 @@ import * as I from '../services/instruments.js';
 import { getSetting } from '../services/settings.js';
 import { config } from '../config.js';
 import { chainFor } from './chain.js';
+import * as MF from '../services/mf.js';
+import * as IPO from '../services/ipo.js';
 import { displayName } from '../../../shared/util.js';
 
 export default async function clientRoutes(app) {
@@ -138,6 +140,24 @@ export default async function clientRoutes(app) {
   });
   app.get('/api/notifications', authed, async (req) => db.query('select * from notifications where (user_id=$1 or user_id is null) order by id desc limit 50', [req.user.id]));
   app.post('/api/notifications/read', authed, async (req) => { await db.query('update notifications set read=true where user_id=$1', [req.user.id]); return { ok: true }; });
+  // ── Mutual funds
+  app.get('/api/mf/schemes', async () => MF.schemes());
+  app.get('/api/mf/portfolio', authed, async (req) => MF.portfolio(req.user.id));
+  app.post('/api/mf/invest', authed, async (req) => MF.invest(req.user, req.body || {}));
+  app.post('/api/mf/redeem', authed, async (req) => MF.redeem(req.user, req.body || {}));
+  app.post('/api/mf/sip', authed, async (req) => MF.startSip(req.user, req.body || {}));
+  app.delete('/api/mf/sip/:id', authed, async (req) => { await MF.cancelSip(req.user, Number(req.params.id)); return { ok: true }; });
+
+  // ── IPO
+  app.get('/api/ipo', async (req) => {
+    let uid = null;
+    const h = req.headers.authorization || '';
+    if (h.startsWith('Bearer ')) { try { uid = (await A.verifyAccess(h.slice(7))).id; } catch { /* anonymous */ } }
+    return IPO.list(uid);
+  });
+  app.post('/api/ipo/:id/apply', authed, async (req) => IPO.apply(req.user, { ...req.body, ipoId: Number(req.params.id) }));
+  app.delete('/api/ipo/:id/apply', authed, async (req) => { await IPO.cancel(req.user, Number(req.params.id)); return { ok: true }; });
+
   app.put('/api/account/safeguard', authed, async (req) => {
     const limit = Math.max(0, Number(req.body?.fnoLossLimit) || 0);
     await db.query('update accounts set fno_loss_limit=$2, fno_paused=$3 where user_id=$1', [req.user.id, limit, !!req.body?.fnoPaused]);

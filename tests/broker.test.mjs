@@ -212,3 +212,38 @@ test('EOD: charges posted, contract note, T+1 settlement, payout limits', async 
   const audit = await ok('GET', '/api/admin/audit', null, admin);
   assert.ok(audit.some((a) => a.action === 'eod_run'));
 });
+
+test('mutual funds: lumpsum, SIP, redeem', async () => {
+  const schemes = await ok('GET', '/api/mf/schemes');
+  assert.ok(schemes.length >= 3);
+  const s = schemes[0];
+  const before = (await ok('GET', '/api/funds', null, client)).available;
+  await ok('POST', '/api/mf/invest', { code: s.code, amount: 5000 }, client);
+  const sip = await ok('POST', '/api/mf/sip', { code: s.code, amount: 1000, day: 5, firstToday: true }, client);
+  assert.equal(sip.installments, 1);
+  const pf = await ok('GET', '/api/mf/portfolio', null, client);
+  assert.equal(pf.holdings.length, 1);
+  assert.equal(pf.holdings[0].invested, 6000);
+  const after = (await ok('GET', '/api/funds', null, client)).available;
+  assert.ok(Math.abs(before - after - 6000) < 1);
+  await ok('POST', '/api/mf/redeem', { code: s.code, all: true }, client);
+  assert.equal((await ok('GET', '/api/mf/portfolio', null, client)).holdings.length, 0);
+});
+
+test('IPO: apply blocks funds, allotment refunds or allots', async () => {
+  const list = await ok('GET', '/api/ipo', null, client);
+  const open = list.find((i) => i.state === 'OPEN');
+  assert.ok(open, 'a sample IPO is open');
+  const bad = await call('POST', `/api/ipo/${open.id}/apply`, { lots: 1, cutoff: true, upiId: 'bad' }, client);
+  assert.equal(bad.status, 400);
+  const a = await ok('POST', `/api/ipo/${open.id}/apply`, { lots: 1, cutoff: true, upiId: 'neeraj@okhdfc' }, client);
+  assert.equal(a.amount, open.lot * open.price_hi);
+  const dup = await call('POST', `/api/ipo/${open.id}/apply`, { lots: 1, cutoff: true, upiId: 'neeraj@okhdfc' }, client);
+  assert.equal(dup.status, 400);
+  // close it and allot 100%
+  await db.query(`update ipos set open_date = current_date - 5, close_date = current_date - 1 where id=$1`, [open.id]);
+  const r = await ok('POST', `/api/admin/ipo/${open.id}/allot`, { pct: 100 }, admin);
+  assert.equal(r.allotted, 1);
+  const led = await ok('GET', '/api/reports/ledger', null, client);
+  assert.ok(led.some((l) => l.type === 'IPO_BLOCK'));
+});

@@ -13,6 +13,7 @@ import { allSettings, setSetting, DEFAULTS } from '../services/settings.js';
 import { allInstruments, loadCache } from '../services/instruments.js';
 import { publicUser } from '../services/auth.js';
 import { displayName, istParts } from '../../../shared/util.js';
+import * as IPO from '../services/ipo.js';
 
 export default async function adminRoutes(app) {
   const staff = { preHandler: requireRole('admin', 'rms', 'ops', 'support') };
@@ -140,5 +141,14 @@ export default async function adminRoutes(app) {
     await audit(req.user, 'sim_price_set', 'instrument', req.body?.token, { price: req.body?.price }, req.ip);
     return M.quote(req.body.token);
   });
+  app.get('/api/admin/ipo', ops, async () => {
+    const list = await IPO.list(null);
+    const counts = await db.query(`select ipo_id, count(*)::int n, coalesce(sum(amount),0) amt from ipo_applications where status <> 'CANCELLED' group by ipo_id`);
+    return list.map((i) => ({ ...i, applications: counts.find((c) => c.ipo_id === i.id)?.n || 0, blocked: counts.find((c) => c.ipo_id === i.id)?.amt || 0 }));
+  });
+  app.post('/api/admin/ipo', ops, async (req) => IPO.create(req.user, req.body || {}));
+  app.post('/api/admin/ipo/:id/allot', ops, async (req) => IPO.allot(req.user, Number(req.params.id), req.body || {}));
+  app.get('/api/admin/mf-orders', ops, async () => db.query(`select o.*, s.name, u.ucc from mf_orders o join mf_schemes s on s.code=o.code join users u on u.id=o.user_id order by o.id desc limit 300`));
+
   app.get('/api/admin/audit', admin, async (req) => db.query(`select a.*, u.name actor from audit_log a left join users u on u.id=a.actor_id where ($1='' or a.action like $1) order by a.id desc limit 500`, [req.query.action ? `%${req.query.action}%` : '']));
 }

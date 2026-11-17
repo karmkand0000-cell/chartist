@@ -25,5 +25,9 @@ services:
         value: "1"             # creates demo@chartist.in / Demo@1234 with ₹10 lakh virtual funds
       - key: SHOW_OTP
         value: "1"             # demo only: OTPs shown on screen. Set to 0 once SMS/email is configured
+      - key: FEED_ADAPTER
+        value: yahoo
+      - key: MF_FEED
+        value: mfapi
       - key: CORS_ORIGINS
         value: "*"

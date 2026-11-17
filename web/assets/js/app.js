@@ -15,14 +15,18 @@ import funds from './pages/funds.js';
 import fno from './pages/fno.js';
 import reports from './pages/reports.js';
 import profile from './pages/profile.js';
+import mf from './pages/mf.js';
+import ipo from './pages/ipo.js';
 
-const ROUTES = { '': home, login: auth, signup: auth, forgot: auth, onboarding, markets, stock, orders, portfolio, funds, fno, reports, profile };
+const ROUTES = { '': home, login: auth, signup: auth, forgot: auth, onboarding, markets, stock, orders, portfolio, funds, fno, reports, profile, mf, ipo };
 const NAV = [
   ['', 'Dashboard', 'M3 13h8V3H3zm10 8h8V11h-8zM3 21h8v-6H3zm10-18v6h8V3z'],
   ['markets', 'Markets', 'M3 17l6-6 4 4 8-8M14 7h7v7'],
   ['orders', 'Orders', 'M5 4h14v16H5zM8 8h8M8 12h8M8 16h5'],
   ['portfolio', 'Portfolio', 'M4 7h16v12H4zM9 7V5h6v2'],
   ['fno', 'Option Chain', 'M4 20V10M10 20V4M16 20v-7M22 20H2'],
+  ['mf', 'Mutual Funds', 'M12 3v18M3 12h18M5 5l14 14'],
+  ['ipo', 'IPO', 'M12 2l3 7h7l-5.5 4.5 2 7L12 16l-6.5 4.5 2-7L2 9h7z'],
   ['funds', 'Funds', 'M3 7h18v10H3zM12 10a2 2 0 1 0 0 4 2 2 0 0 0 0-4'],
   ['reports', 'Reports', 'M6 3h9l3 3v15H6zM9 12h6M9 16h6M9 8h3'],
   ['profile', 'Profile & security', 'M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8zm-7 9a7 7 0 0 1 14 0'],

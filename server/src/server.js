@@ -14,7 +14,9 @@ import { seedInstruments, rollDerivatives } from './services/instruments.js';
 import { initMarket, startFeed, spotOf } from './services/market.js';
 import { initOms, startRiskMonitor } from './services/oms.js';
 import { startEodScheduler } from './services/eod.js';
-import { ensureAdmin, ensureDemo, DEMO } from './services/auth.js';
+import { ensureAdmin, ensureDemo } from './services/auth.js';
+import { initMf, processSips } from './services/mf.js';
+import { seedSampleIpos } from './services/ipo.js';
 import clientRoutes from './routes/client.js';
 import adminRoutes from './routes/admin.js';
 import wsRoutes from './ws.js';
@@ -29,6 +31,9 @@ export async function build({ logger = true, background = true } = {}) {
   await rollDerivatives(spotOf);
   await ensureAdmin();
   await ensureDemo();
+  await initMf();
+  await seedSampleIpos();
+  await processSips().catch(() => {});
   await initOms();
   if (background) { startFeed(); startRiskMonitor(); startEodScheduler(); }
 
