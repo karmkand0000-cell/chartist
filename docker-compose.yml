@@ -1,0 +1,25 @@
+# Production-like stack: API + PostgreSQL. Run: docker compose up -d
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: chartist
+      POSTGRES_USER: chartist
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-change-me}
+    volumes: [pgdata:/var/lib/postgresql/data]
+    restart: unless-stopped
+  api:
+    build: .
+    depends_on: [db]
+    environment:
+      DATABASE_URL: postgres://chartist:${DB_PASSWORD:-change-me}@db:5432/chartist
+      JWT_SECRET: ${JWT_SECRET:?set JWT_SECRET}
+      ADMIN_EMAIL: ${ADMIN_EMAIL:-admin@chartist.in}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:?set ADMIN_PASSWORD}
+      CORS_ORIGINS: ${CORS_ORIGINS:-*}
+      BROKER_NAME: ${BROKER_NAME:-Chartist Securities}
+      OTP_DELIVERY: ${OTP_DELIVERY:-log}
+    ports: ["8080:8080"]
+    restart: unless-stopped
+volumes:
+  pgdata:

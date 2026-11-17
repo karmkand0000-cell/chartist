@@ -1,0 +1,7 @@
+{
+  "appId": "in.chartist.app",
+  "appName": "Chartist",
+  "webDir": "www",
+  "android": { "allowMixedContent": false },
+  "server": { "androidScheme": "https" }
+}

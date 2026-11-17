@@ -1,0 +1,16 @@
+# Render.com blueprint (free web service). Pair with a free Postgres from Neon or Supabase via DATABASE_URL.
+services:
+  - type: web
+    name: chartist-broker
+    runtime: docker
+    plan: free
+    healthCheckPath: /api/health
+    envVars:
+      - key: DATABASE_URL
+        sync: false
+      - key: JWT_SECRET
+        generateValue: true
+      - key: ADMIN_EMAIL
+        value: admin@chartist.in
+      - key: ADMIN_PASSWORD
+        sync: false
