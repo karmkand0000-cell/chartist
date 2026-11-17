@@ -1,16 +1,29 @@
-# Render.com blueprint (free web service). Pair with a free Postgres from Neon or Supabase via DATABASE_URL.
+# Render blueprint — free web service (Singapore). Database: Neon free Postgres (paste its connection string as DATABASE_URL).
 services:
   - type: web
-    name: chartist-broker
+    name: chartist
     runtime: docker
     plan: free
+    region: singapore
     healthCheckPath: /api/health
     envVars:
       - key: DATABASE_URL
-        sync: false
+        sync: false            # paste your Neon connection string when Render asks
       - key: JWT_SECRET
         generateValue: true
       - key: ADMIN_EMAIL
         value: admin@chartist.in
       - key: ADMIN_PASSWORD
-        sync: false
+        generateValue: true    # see the generated value in Render → Environment
+      - key: BROKER_NAME
+        value: Chartist Securities (Simulator)
+      - key: MARKET_MODE
+        value: open            # simulator open 24x7 for the demo
+      - key: SIM_ALWAYS_TICK
+        value: "1"
+      - key: DEMO_SEED
+        value: "1"             # creates demo@chartist.in / Demo@1234 with ₹10 lakh virtual funds
+      - key: SHOW_OTP
+        value: "1"             # demo only: OTPs shown on screen. Set to 0 once SMS/email is configured
+      - key: CORS_ORIGINS
+        value: "*"
