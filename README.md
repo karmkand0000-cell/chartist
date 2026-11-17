@@ -4,6 +4,17 @@ A full-stack stock-broking platform: client trading app (web + Android), back-of
 
 It runs today against a built-in **exchange simulator**. When the broking entity has its SEBI registration, exchange membership and certified connectivity, the simulator is swapped for a real exchange gateway — the rest of the system stays the same. See [docs/GO-LIVE.md](docs/GO-LIVE.md).
 
+## Live demo
+
+| | |
+|---|---|
+| **Client app** | https://chartist.onrender.com |
+| **Back office** | https://chartist.onrender.com/admin/ (admin@chartist.in · password is the `ADMIN_PASSWORD` value in Render → Environment) |
+| **Demo client** | `demo@chartist.in` / `Demo@1234` — or press **Fill demo login** on the login page |
+| **Android APK** | GitHub → Actions → *Android APK* → latest run → artifact `chartist-debug-apk` |
+
+The demo runs on free tiers (Render web service + Neon Postgres, Singapore). The free server sleeps after 15 minutes idle, so the first visit can take ~50 seconds. The exchange is a **simulator** that is kept open 24×7, OTPs are shown on screen and prices are delayed reference prices (Yahoo Finance) — none of this is for real trading.
+
 ## What's inside
 
 | Module | Highlights |
@@ -16,6 +27,8 @@ It runs today against a built-in **exchange simulator**. When the broking entity
 | **Market data** | Equities, indices, rolling NIFTY/BANKNIFTY weekly & monthly options and futures · WebSocket quotes · daily candles · option chain with Greeks, PCR, max pain |
 | **Funds & ledger** | Double-entry style ledger · pay-in via UPI/IMPS/NEFT with UTR (ops approval) · payouts limited to withdrawable balance · unsettled sell credit (T+1) · accrued charges |
 | **Back office (EOD)** | Cancels day orders · posts brokerage & statutory charges · contract notes · futures MTM · option/future expiry settlement · T+1 delivery settlement · candles & circuit roll · auto-runs at 16:00 IST |
+| **Mutual funds** | Explore funds with 1Y / 3Y / 5Y returns (real AMFI NAVs via mfapi.in, or demo schemes) · one-time investment · monthly SIP with auto-debit on the chosen date · redeem · MF orders desk in back office |
+| **IPO** | Open / upcoming / closed issues · apply with lots, bid price or cut-off and UPI ID · funds blocked and released on withdrawal · back-office allotment (lottery) with refunds and credit of allotted shares |
 | **Reports** | P&L by category (intraday / delivery / F&O) · tradebook · ledger statement · contract notes |
 | **Client app** | Dashboard, markets & heatmap, charts (candles, SMA, Bollinger, RSI, MACD), order window with live margin & charges preview, portfolio, funds, option chain + strategy builder with payoff, GTT (single & OCO), price alerts, watchlists, notifications, dark/light, mobile layout |
 | **Back-office console** (`/admin/`) | Dashboard · KYC queue with document viewer · clients (limits, suspend, role, RMS square-off) · fund requests · orders & trades · RMS monitor · operations (kill switch, session, AMO, F&O switch, lot sizes, EOD, broadcast) · audit log |
