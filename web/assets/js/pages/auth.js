@@ -29,6 +29,7 @@ export default {
     return card(`<h1>Welcome back</h1><p class="muted">Log in with your email, mobile or client ID.</p>
       <form id="f"><label>Email / mobile / client ID<input name="login" required autocomplete="username"></label><label>Password<input name="password" type="password" required autocomplete="current-password"></label>
       <p class="form-err" id="err"></p><button class="btn block lg">Continue</button></form>
+      ${App.meta?.demo ? `<div class="note" style="margin:10px 0"><b>Try the demo account</b><br>Login: <code>${esc(App.meta.demo.email)}</code> · Password: <code>${esc(App.meta.demo.password)}</code><br><button type="button" class="btn sm" id="useDemo" style="margin-top:6px">Fill demo login</button></div>` : ''}
       <p class="center muted"><a href="#/forgot">Forgot password?</a> · New here? <a href="#/signup">Open account</a></p>`);
   },
   mount(root, r) {
@@ -78,6 +79,8 @@ export default {
         } catch (x) { err(x.message); }
       };
     } else {
+      const ud = root.querySelector('#useDemo');
+      if (ud) ud.onclick = () => { f.login.value = App.meta.demo.email; f.password.value = App.meta.demo.password; };
       f.onsubmit = async (e) => {
         e.preventDefault();
         try {

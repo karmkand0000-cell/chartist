@@ -215,7 +215,7 @@ async function placeSystemOrder(user, input, actor) {
   const row = await db.one(`insert into orders(user_id, token, side, qty, order_type, product, status, tag, placed_by, trade_date) values ($1,$2,$3,$4,'MARKET',$5,'OPEN_PENDING',$6,$7,$8) returning *`,
     [user.id, input.token, input.side, input.qty, input.product, input.tag, actor?.id || null, today]);
   await event(db, row.id, 'OPEN_PENDING', 'System order');
-  if (isOpen() || config.dev) exchange.submit(row);
+  if (isOpen() || config.simAlwaysTick) exchange.submit(row);
   return decorate(row);
 }
 

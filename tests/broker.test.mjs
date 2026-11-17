@@ -1,5 +1,6 @@
 // End-to-end API test: onboarding → KYC → funds → orders (equity + F&O) → RMS → EOD → payout
 process.env.PGLITE_DIR = '';
+process.env.DATABASE_URL = process.env.TEST_DATABASE_URL || '';
 process.env.DEV_MODE = '1';
 process.env.SIM_TICK_MS = '100000';
 import { test, before, after } from 'node:test';

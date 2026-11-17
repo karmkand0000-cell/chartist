@@ -65,7 +65,7 @@ export async function initMarket() {
 function gauss() { let u = 0, v = 0; while (!u) u = Math.random(); while (!v) v = Math.random(); return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v); }
 function step() {
   const open = isOpen();
-  if (!open && !config.dev) return;
+  if (!open && !config.simAlwaysTick) return;
   const moved = [];
   for (const q of Q.values()) {
     const inst = getInstrument(q.token);

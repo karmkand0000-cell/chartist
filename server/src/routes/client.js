@@ -21,7 +21,7 @@ export default async function clientRoutes(app) {
 
   // ── Public
   app.get('/api/health', async () => ({ ok: true, db: (await db.one('select 1 as x')).x === 1, exchange: O.exchangeName(), market: M.marketStatus(), time: new Date().toISOString() }));
-  app.get('/api/meta', async () => ({ broker: config.brokerName, sebiReg: config.sebiReg, market: M.marketStatus(), exchange: O.exchangeName(), simulator: O.exchangeName() === 'SIMULATOR', killSwitch: getSetting('kill_switch'), squareOffTime: getSetting('square_off_time') }));
+  app.get('/api/meta', async () => ({ demo: config.demoSeed && config.showOtp ? { email: 'demo@chartist.in', password: 'Demo@1234' } : null, broker: config.brokerName, sebiReg: config.sebiReg, market: M.marketStatus(), exchange: O.exchangeName(), simulator: O.exchangeName() === 'SIMULATOR', killSwitch: getSetting('kill_switch'), squareOffTime: getSetting('square_off_time') }));
   app.get('/api/instruments/search', async (req) => I.searchInstruments(req.query.q, 25).map((i) => ({ token: i.token, symbol: i.symbol, name: i.name, segment: i.segment, exchange: i.exchange, lot: i.lot, ltp: M.ltpOf(i.token) })));
   app.get('/api/instruments/:token', async (req) => { const i = I.getInstrument(req.params.token); if (!i) throw notFound(); return { ...i, quote: M.quote(i.token) }; });
   app.get('/api/market/overview', async () => {

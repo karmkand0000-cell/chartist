@@ -25,7 +25,7 @@ export async function issueOtp(userId, target, purpose, h = db) {
   await h.query('update otps set used = true where user_id = $1 and purpose = $2 and not used', [userId, purpose]);
   await h.query(`insert into otps(user_id, target, purpose, code_hash, expires_at) values ($1,$2,$3,$4, now() + interval '5 minutes')`, [userId, target, purpose, sha(code)]);
   await deliverOtp(target, code, purpose);
-  return config.dev ? code : undefined;
+  return config.showOtp ? code : undefined;
 }
 export async function checkOtp(userId, purpose, code) {
   const o = await db.one('select * from otps where user_id=$1 and purpose=$2 and not used order by id desc limit 1', [userId, purpose]);
@@ -53,7 +53,7 @@ export async function signup({ name, email, mobile, password }, ip) {
   const mobileOtp = await issueOtp(user.id, mobile, 'verify_mobile');
   const emailOtp = await issueOtp(user.id, email, 'verify_email');
   await audit(user, 'signup', 'user', user.id, { email, mobile }, ip);
-  return { user: publicUser(user), ...(config.dev ? { devOtp: { mobile: mobileOtp, email: emailOtp } } : {}) };
+  return { user: publicUser(user), ...(config.showOtp ? { devOtp: { mobile: mobileOtp, email: emailOtp } } : {}) };
 }
 
 export async function verifyContact(user, kind, code) {
@@ -177,4 +177,16 @@ export async function ensureAdmin() {
     values ('admin','Administrator',$1,'9000000000',$2,'active',true,true,'ADMIN1') returning *`, [config.adminEmail, await bcrypt.hash(config.adminPassword, 10)]);
   await db.query('insert into accounts(user_id) values ($1)', [u.id]);
   console.log(`Admin user created: ${config.adminEmail}`);
+}
+
+export const DEMO = { email: 'demo@chartist.in', password: 'Demo@1234' };
+export async function ensureDemo() {
+  if (!config.demoSeed || await db.one('select 1 from users where email=$1', [DEMO.email])) return;
+  const u = await db.one(`insert into users(name, email, mobile, password_hash, status, email_verified, mobile_verified, ucc)
+    values ('Demo Trader',$1,'9999999999',$2,'active',true,true,'CHDEMO1') returning *`, [DEMO.email, await bcrypt.hash(DEMO.password, 10)]);
+  await db.query('insert into accounts(user_id, cash) values ($1, 1000000)', [u.id]);
+  await db.query(`insert into ledger(user_id, entry_date, type, credit, balance, narration) values ($1, (now() at time zone 'Asia/Kolkata')::date, 'PAYIN', 1000000, 1000000, 'Demo funds')`, [u.id]);
+  await db.query(`insert into kyc(user_id, pan, pan_name, dob, gender, segments, status, ipv_done, esign_done) values ($1,'AAAPD0000D','DEMO TRADER','1990-01-01','M','{EQ,FO}','approved',true,true)`, [u.id]);
+  await db.query(`insert into watchlists(user_id, name, tokens) values ($1,'Watchlist 1',$2)`, [u.id, ['IDX:NIFTY50', 'IDX:BANKNIFTY', 'NSE:RELIANCE', 'NSE:HDFCBANK', 'NSE:TCS', 'NSE:INFY', 'NSE:ICICIBANK', 'NSE:SBIN']]);
+  console.log('Demo client created:', DEMO.email);
 }

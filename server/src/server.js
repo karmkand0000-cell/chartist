@@ -14,7 +14,7 @@ import { seedInstruments, rollDerivatives } from './services/instruments.js';
 import { initMarket, startFeed, spotOf } from './services/market.js';
 import { initOms, startRiskMonitor } from './services/oms.js';
 import { startEodScheduler } from './services/eod.js';
-import { ensureAdmin } from './services/auth.js';
+import { ensureAdmin, ensureDemo, DEMO } from './services/auth.js';
 import clientRoutes from './routes/client.js';
 import adminRoutes from './routes/admin.js';
 import wsRoutes from './ws.js';
@@ -28,6 +28,7 @@ export async function build({ logger = true, background = true } = {}) {
   await initMarket();
   await rollDerivatives(spotOf);
   await ensureAdmin();
+  await ensureDemo();
   await initOms();
   if (background) { startFeed(); startRiskMonitor(); startEodScheduler(); }
 

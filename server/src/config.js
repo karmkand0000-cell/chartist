@@ -22,5 +22,8 @@ export const config = {
   tickMs: Number(env.SIM_TICK_MS || 1000),
   marketMode: env.MARKET_MODE || 'auto',              // auto | open | closed (simulator only)
   require2FA: env.REQUIRE_2FA !== '0',
+  showOtp: env.SHOW_OTP === '1' || dev,               // demo only: return OTPs in API responses
+  simAlwaysTick: env.SIM_ALWAYS_TICK === '1' || dev,  // simulator prices move outside market hours
+  demoSeed: env.DEMO_SEED === '1',                    // create a funded demo client account
   otpDelivery: env.OTP_DELIVERY || 'log',             // log | smtp (configure SMTP_* vars)
 };

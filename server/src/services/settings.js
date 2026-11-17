@@ -1,8 +1,9 @@
 import { db } from '../db.js';
+import { config } from '../config.js';
 const cache = new Map();
 export const DEFAULTS = {
   kill_switch: false,                // blocks all new orders platform-wide
-  market_mode: 'auto',               // auto | open | closed
+  market_mode: config.marketMode,    // auto | open | closed (env MARKET_MODE sets the default)
   square_off_time: '15:20',
   allow_amo: true,
   fno_enabled: true,
